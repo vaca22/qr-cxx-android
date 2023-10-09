@@ -4,6 +4,14 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        vaca {
+            storeFile file('..\\key\\vaca.jks')
+            storePassword '0168lgh'
+            keyAlias 'key0'
+            keyPassword '0168lgh'
+        }
+    }
     namespace 'com.vaca.qr_cxx_android'
     compileSdk 33
 
@@ -24,8 +32,12 @@ android {
 
     buildTypes {
         release {
+            signingConfig signingConfigs.vaca
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.vaca
         }
     }
     compileOptions {

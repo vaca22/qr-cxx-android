@@ -25,12 +25,12 @@ class MainActivity : AppCompatActivity() {
         val buffer = ByteArray(size)
         inputStream.read(buffer)
         inputStream.close()
-        qr(buffer)
+        binding.sampleText.text = qr(buffer).toString()
     }
 
 
     external fun stringFromJNI(): String
-    external fun qr(b:ByteArray)
+    external fun qr(b:ByteArray):Float
 
     companion object {
         // Used to load the 'qr_cxx_android' library on application startup.

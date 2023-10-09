@@ -34,7 +34,7 @@ Java_com_vaca_qr_1cxx_1android_MainActivity_stringFromJNI(
 }
 
 extern "C"
-JNIEXPORT void JNICALL
+JNIEXPORT jfloat JNICALL
 Java_com_vaca_qr_1cxx_1android_MainActivity_qr(JNIEnv *env, jobject thiz, jbyteArray b) {
     //get the length of the array
     jsize len = env->GetArrayLength(b);
@@ -49,7 +49,8 @@ Java_com_vaca_qr_1cxx_1android_MainActivity_qr(JNIEnv *env, jobject thiz, jbyteA
                                                               reinterpret_cast<const stbi_uc *>(buffer_img), len, &width, &height, &channels, 3),
                                                       stbi_image_free);
     if (buffer == nullptr) {
-        return;
+        LOGE( "Failed to read image");
+        return 0;
     }
 
     ImageView image{buffer.get(), width, height, ImageFormat::RGB};
@@ -62,4 +63,5 @@ Java_com_vaca_qr_1cxx_1android_MainActivity_qr(JNIEnv *env, jobject thiz, jbyteA
     LOGE( "Time:       %f", diff.count());
     //release the buffer when done
     env->ReleaseByteArrayElements(b, buffer_img, 0);
+    return diff.count();
 }

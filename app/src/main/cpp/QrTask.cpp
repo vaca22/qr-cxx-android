@@ -74,21 +74,18 @@ void QrTask::parseJson(char *json) {
         data_buffer_array[index_int][strlen(data_str)]='\0';
     }
 
-   // LOGE("index:%d\n", index_int);
+    LOGE("index:%d\n", index_int);
 
     int full_flag=1;
     int total_len=0;
-    int good=0;
     for(int i=0;i<total_int;i++){
         if(data_buffer_array[i]==nullptr){
             full_flag=0;
-//            break;
+            break;
         }else{
-            good++;
             total_len+=strlen(data_buffer_array[i]);
         }
     }
-    LOGE("good:%d  total:%d ", good,total_int);
 
     if(full_flag){
         char *full_data= static_cast<char *>(malloc(total_len + 1));

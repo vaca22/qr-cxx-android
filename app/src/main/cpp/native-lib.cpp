@@ -65,3 +65,30 @@ Java_com_vaca_qr_1cxx_1android_MainActivity_qr(JNIEnv *env, jobject thiz, jbyteA
     env->ReleaseByteArrayElements(b, buffer_img, 0);
     return diff.count();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_vaca_qr_1cxx_1android_MainActivity_inputImg(JNIEnv *env, jobject thiz, jbyteArray b) {
+    //get the length of the array
+    jsize len = env->GetArrayLength(b);
+    //allocate a buffer to store the array
+    jbyte *buffer_img=env->GetByteArrayElements(b, 0);
+    auto start = std::chrono::high_resolution_clock::now();
+    DecodeHints hints;
+    hints.setTextMode(TextMode::HRI);
+    hints.setEanAddOnSymbol(EanAddOnSymbol::Read);
+    int width=1080;
+    int height=1920;
+
+
+    ImageView image{reinterpret_cast<const uint8_t *>(buffer_img), width, height, ImageFormat::Lum, width, 0};
+    auto results = ReadBarcodes(image, hints);
+    for (auto &&result: results) {
+        LOGE( "Text:       %s", result.text().c_str());
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end-start;
+    LOGE( "Time:       %f", diff.count());
+    //release the buffer when done
+    env->ReleaseByteArrayElements(b, buffer_img, 0);
+}

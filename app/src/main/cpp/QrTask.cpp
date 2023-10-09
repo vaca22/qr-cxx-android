@@ -45,20 +45,16 @@ void QrTask::charsMd5(char * decoded_data,char * md5_str){
 void QrTask::decodeBase64Data(char *input_data, char *out_data) {
     int write_len = 0;
     int source_len = strlen(input_data);
-    LOGE("source_len:%d",source_len);
-    int result=mbedtls_base64_decode((unsigned char *) out_data, source_len, reinterpret_cast<size_t *>(&write_len),
+    mbedtls_base64_decode((unsigned char *) out_data, source_len, reinterpret_cast<size_t *>(&write_len),
                           (unsigned char *) input_data,source_len);
-    LOGE("write_len:%d  result:%d",write_len,result);
 }
 
 void QrTask::parseJson(char *json) {
     cJSON *root = cJSON_Parse(json);
-    //index, data,md5
     cJSON *index = cJSON_GetObjectItem(root, "index");
     cJSON *total = cJSON_GetObjectItem(root, "total");
     cJSON *data = cJSON_GetObjectItem(root, "data");
     cJSON *md5 = cJSON_GetObjectItem(root, "md5");
-
     if (md5 != NULL) {
         strcpy(global_md5,md5->valuestring);
     }
@@ -118,10 +114,6 @@ void QrTask::parseJson(char *json) {
         free(data_buffer_array);
         data_buffer_array=NULL;
     }
-
-
-
-
 }
 
 
@@ -142,11 +134,9 @@ void QrTask::operator()() {
     ImageView image{buffer.get(), width, height, ImageFormat::RGB};
     auto results = ReadBarcodes(image, hints);
     for (auto &&result: results) {
-//        LOGE("Text:       %s", result.text().c_str());
         parseJson(const_cast<char *>(result.text().c_str()));
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
-//    LOGE("Time:       %f", diff.count());
     delete[] buffer_data;
 }

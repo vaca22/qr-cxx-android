@@ -118,10 +118,10 @@ void QrTask::parseJson(char *json) {
 
 
 void QrTask::operator()() {
-    auto start = std::chrono::high_resolution_clock::now();
     DecodeHints hints;
     hints.setTextMode(TextMode::HRI);
     hints.setEanAddOnSymbol(EanAddOnSymbol::Read);
+    hints.setMaxNumberOfSymbols(1);
     int width, height, channels;
     std::unique_ptr<stbi_uc, void (*)(void *)> buffer(stbi_load_from_memory(
                                                               reinterpret_cast<const stbi_uc *>(buffer_data), len, &width, &height, &channels, 3),
@@ -130,13 +130,16 @@ void QrTask::operator()() {
         LOGE("Failed to read image");
         return;
     }
-
     ImageView image{buffer.get(), width, height, ImageFormat::RGB};
-    auto results = ReadBarcodes(image, hints);
-    for (auto &&result: results) {
-        parseJson(const_cast<char *>(result.text().c_str()));
+    try{
+        auto results = ReadBarcodes(image, hints);
+        for (auto &&result: results) {
+            parseJson(const_cast<char *>(result.text().c_str()));
+        }
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = end - start;
+    catch (const std::exception &e) {
+        LOGE("Error: %s", e.what());
+    }
+
     delete[] buffer_data;
 }

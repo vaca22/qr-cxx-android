@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
     private fun NV21toJPEG(nv21: ByteArray, width: Int, height: Int): ByteArray {
         val out = ByteArrayOutputStream()
         val yuv = YuvImage(nv21, ImageFormat.NV21, width, height, null)
-        yuv.compressToJpeg(Rect(0, 0, width, height), 30, out)
+        yuv.compressToJpeg(Rect(0, 0, width, height), 60, out)
         return out.toByteArray()
     }
     private inner class ImageSaver(var reader: ImageReader) : Runnable {

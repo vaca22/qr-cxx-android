@@ -176,7 +176,6 @@ class MainActivity : AppCompatActivity() {
 
 
 
-    external fun qr(b:ByteArray):Float
     external fun inputImage(b:ByteArray)
     external fun initWorker()
 

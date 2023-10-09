@@ -12,7 +12,8 @@ add_library(
         qr_cxx_android
         SHARED
         native-lib.cpp
-        cJSON.c)
+        cJSON.c
+        QrTask.cpp)
 
 find_library(
         log-lib

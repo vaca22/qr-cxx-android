@@ -104,10 +104,17 @@ void QrTask::parseJson(char *json) {
         LOGE("full_data:%s\n",full_data);
         decodeBase64Data(full_data,decoded_data);
         LOGE("decoded_data:%s\n",decoded_data);
-        char*md5_str= static_cast<char *>(malloc(33));
+        char*md5_str= static_cast<char *>(malloc(16));
         charsMd5(decoded_data,md5_str);
-        LOGE("md5 calc :%s\n",md5_str);
-        if(strcmp(md5_str,global_md5)==0){
+        //LOGE("md5 calc :%s\n",md5_str);
+        char md5_str2[33];
+        for(int i=0;i<16;i++){
+            sprintf(&md5_str2[i*2],"%02x",(unsigned char)md5_str[i]);
+        }
+        md5_str2[32]='\0';
+        LOGE("md5 calc :%s\n",md5_str2);
+
+        if(strcmp(md5_str2,global_md5)==0){
             LOGE("md5 check ok\n");
         }else{
             LOGE("md5 check failed\n");

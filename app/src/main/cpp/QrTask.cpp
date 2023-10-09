@@ -46,9 +46,9 @@ void QrTask::decodeBase64Data(char *input_data, char *out_data) {
     int write_len = 0;
     int source_len = strlen(input_data);
     LOGE("source_len:%d",source_len);
-    mbedtls_base64_decode((unsigned char *) out_data, source_len*3, reinterpret_cast<size_t *>(&write_len),
+    int result=mbedtls_base64_decode((unsigned char *) out_data, source_len, reinterpret_cast<size_t *>(&write_len),
                           (unsigned char *) input_data,source_len);
-    LOGE("write_len:%d",write_len);
+    LOGE("write_len:%d  result:%d",write_len,result);
 }
 
 void QrTask::parseJson(char *json) {
@@ -101,6 +101,7 @@ void QrTask::parseJson(char *json) {
         }
         full_data[total_len]='\0';
         char*decoded_data= static_cast<char *>(malloc(total_len + 1));
+        LOGE("full_data:%s\n",full_data);
         decodeBase64Data(full_data,decoded_data);
         LOGE("decoded_data:%s\n",decoded_data);
         char*md5_str= static_cast<char *>(malloc(33));

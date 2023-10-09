@@ -11,15 +11,9 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
-import android.util.Log
 import android.util.Size
-import android.widget.TextView
-import androidx.core.content.ContentProviderCompat.requireContext
 import com.vaca.qr_cxx_android.databinding.ActivityMainBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
-import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -85,7 +79,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onConfigureFailed(session: CameraCaptureSession) {}
         }
-    private fun YUV_420_888toNV21(image: Image): ByteArray {
+    private fun convertYUV_420_888toNV21(image: Image): ByteArray {
         val nv21: ByteArray
         val yBuffer = image.planes[0].buffer
         val vuBuffer = image.planes[2].buffer
@@ -97,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         return nv21
     }
 
-    private fun NV21toJPEG(nv21: ByteArray, width: Int, height: Int): ByteArray {
+    private fun convertNV21toJPEG(nv21: ByteArray, width: Int, height: Int): ByteArray {
         val out = ByteArrayOutputStream()
         val yuv = YuvImage(nv21, ImageFormat.NV21, width, height, null)
         yuv.compressToJpeg(Rect(0, 0, width, height), 60, out)
@@ -106,27 +100,24 @@ class MainActivity : AppCompatActivity() {
     private inner class ImageSaver(var reader: ImageReader) : Runnable {
         override fun run() {
             val image = reader.acquireLatestImage() ?: return
-
-            val data = NV21toJPEG(
-                YUV_420_888toNV21(image),
+            val data = convertNV21toJPEG(
+                convertYUV_420_888toNV21(image),
                 image.width, image.height
-            );
-
-            qr(data)
-
+            )
+            inputImage(data)
             image.close()
         }
     }
 
 
     private fun updatePreview() {
-        mHandler.post(Runnable {
+        mHandler.post {
             try {
                 mCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler)
             } catch (e: CameraAccessException) {
                 e.printStackTrace()
             }
-        })
+        }
     }
 
     private fun startPreview(camera: CameraDevice) {
@@ -147,7 +138,7 @@ class MainActivity : AppCompatActivity() {
 
 
         camera.createCaptureSession(
-            Arrays.asList(mImageReader.surface),
+            listOf(mImageReader.surface),
             mSessionStateCallback,
             mHandler
         )
@@ -167,8 +158,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        initWorker()
 
-        binding.sampleText.text = stringFromJNI()
 
 
         //read assets file
@@ -184,9 +175,10 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    external fun stringFromJNI(): String
+
     external fun qr(b:ByteArray):Float
-    external fun inputImg(b:ByteArray)
+    external fun inputImage(b:ByteArray)
+    external fun initWorker()
 
     companion object {
         init {

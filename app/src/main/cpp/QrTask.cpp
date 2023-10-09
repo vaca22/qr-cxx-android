@@ -45,8 +45,10 @@ void QrTask::charsMd5(char * decoded_data,char * md5_str){
 void QrTask::decodeBase64Data(char *input_data, char *out_data) {
     int write_len = 0;
     int source_len = strlen(input_data);
-    mbedtls_base64_decode((unsigned char *) out_data, source_len, reinterpret_cast<size_t *>(&write_len),
+    LOGE("source_len:%d",source_len);
+    mbedtls_base64_decode((unsigned char *) out_data, source_len*3, reinterpret_cast<size_t *>(&write_len),
                           (unsigned char *) input_data,source_len);
+    LOGE("write_len:%d",write_len);
 }
 
 void QrTask::parseJson(char *json) {
@@ -79,9 +81,9 @@ void QrTask::parseJson(char *json) {
     LOGE("index:%d\n", index_int);
 
     int full_flag=1;
-    int total_len;
+    int total_len=0;
     for(int i=0;i<total_int;i++){
-        if(data_buffer_array[i]==NULL){
+        if(data_buffer_array[i]==nullptr){
             full_flag=0;
             break;
         }else{
@@ -138,11 +140,11 @@ void QrTask::operator()() {
     ImageView image{buffer.get(), width, height, ImageFormat::RGB};
     auto results = ReadBarcodes(image, hints);
     for (auto &&result: results) {
-        LOGE("Text:       %s", result.text().c_str());
+//        LOGE("Text:       %s", result.text().c_str());
         parseJson(const_cast<char *>(result.text().c_str()));
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
-    LOGE("Time:       %f", diff.count());
+//    LOGE("Time:       %f", diff.count());
     delete[] buffer_data;
 }

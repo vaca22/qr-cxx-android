@@ -32,6 +32,7 @@ using namespace std;
 
 char QrTask::global_md5[33];
 char** QrTask::data_buffer_array;
+FEC QrTask::fec;
 
 void QrTask::charsMd5(char * decoded_data,char * md5_str){
     mbedtls_md5_context ctx;
@@ -42,11 +43,12 @@ void QrTask::charsMd5(char * decoded_data,char * md5_str){
     mbedtls_md5_free(&ctx);
 }
 
-void QrTask::decodeBase64Data(char *input_data, char *out_data) {
+int QrTask::decodeBase64Data(char *input_data, char *out_data) {
     int write_len = 0;
     int source_len = strlen(input_data);
     mbedtls_base64_decode((unsigned char *) out_data, source_len, reinterpret_cast<size_t *>(&write_len),
                           (unsigned char *) input_data,source_len);
+    return write_len;
 }
 
 void QrTask::parseJson(char *json) {
@@ -61,59 +63,75 @@ void QrTask::parseJson(char *json) {
     int index_int = index->valueint;
     int total_int = total->valueint;
 
-    if(data_buffer_array==nullptr){
-        data_buffer_array= static_cast<char **>(malloc(total_int * sizeof(char *)));
-        for(int i=0;i<total_int;i++){
-            data_buffer_array[i]=nullptr;
-        }
-    }
+//    if(data_buffer_array==nullptr){
+//        data_buffer_array= static_cast<char **>(malloc(total_int * sizeof(char *)));
+//        for(int i=0;i<total_int;i++){
+//            data_buffer_array[i]=nullptr;
+//        }
+//    }
     char *data_str = data->valuestring;
-    if(data_buffer_array[index_int]==nullptr){
-        data_buffer_array[index_int]= reinterpret_cast<char *>(malloc(strlen(data_str) + 1));
-        strcpy(data_buffer_array[index_int],data_str);
-        data_buffer_array[index_int][strlen(data_str)]='\0';
+    char *full_data= static_cast<char *>(malloc(3*strlen(data_str) + 1));
+    int sizex=decodeBase64Data(data_str,full_data);
+  //  LOGE("sizex:%d\n", sizex);
+    fecPacket pkt;
+    auto shared_ptr = std::make_shared<std::vector<unsigned char>>(full_data,full_data+sizex);
+    pkt.data=shared_ptr;
+    pkt.seqid=index_int;
+    if(index_int>=39){
+        pkt.flag=typeFEC;
+    }else{
+        pkt.flag=typeData;
     }
+    auto recovered = fec.Input(pkt);
+    if(!recovered.empty()){
+        LOGE("recovered:%u\n", recovered.size());
+    }
+//    if(data_buffer_array[index_int]==nullptr){
+//        data_buffer_array[index_int]= reinterpret_cast<char *>(malloc(strlen(data_str) + 1));
+//        strcpy(data_buffer_array[index_int],data_str);
+//        data_buffer_array[index_int][strlen(data_str)]='\0';
+//    }
 
     LOGE("index:%d\n", index_int);
 
-    int full_flag=1;
-    int total_len=0;
-    for(int i=0;i<total_int;i++){
-        if(data_buffer_array[i]==nullptr){
-            full_flag=0;
-            break;
-        }else{
-            total_len+=strlen(data_buffer_array[i]);
-        }
-    }
+//    int full_flag=1;
+//    int total_len=0;
+//    for(int i=0;i<total_int;i++){
+//        if(data_buffer_array[i]==nullptr){
+//            full_flag=0;
+//            break;
+//        }else{
+//            total_len+=strlen(data_buffer_array[i]);
+//        }
+//    }
 
-    if(full_flag){
-        char *full_data= static_cast<char *>(malloc(total_len + 1));
-        full_data[0]='\0';
-        for(int i=0;i<total_int;i++){
-            strcat(full_data,data_buffer_array[i]);
-            free(data_buffer_array[i]);
-        }
-        full_data[total_len]='\0';
-        char*decoded_data= static_cast<char *>(malloc(total_len + 1));
-        decodeBase64Data(full_data,decoded_data);
-        char*md5_str= static_cast<char *>(malloc(16));
-        charsMd5(decoded_data,md5_str);
-        char md5_str2[33];
-        for(int i=0;i<16;i++){
-            sprintf(&md5_str2[i*2],"%02x",(unsigned char)md5_str[i]);
-        }
-        md5_str2[32]='\0';
-        if(strcmp(md5_str2,global_md5)==0){
-            LOGE("md5 check ok\n");
-        }else{
-            LOGE("md5 check failed\n");
-        }
-        free(md5_str);
-        free(decoded_data);
-        free(data_buffer_array);
-        data_buffer_array=NULL;
-    }
+//    if(full_flag){
+//        char *full_data= static_cast<char *>(malloc(total_len + 1));
+//        full_data[0]='\0';
+//        for(int i=0;i<total_int;i++){
+//            strcat(full_data,data_buffer_array[i]);
+//            free(data_buffer_array[i]);
+//        }
+//        full_data[total_len]='\0';
+//        char*decoded_data= static_cast<char *>(malloc(total_len + 1));
+//        decodeBase64Data(full_data,decoded_data);
+//        char*md5_str= static_cast<char *>(malloc(16));
+//        charsMd5(decoded_data,md5_str);
+//        char md5_str2[33];
+//        for(int i=0;i<16;i++){
+//            sprintf(&md5_str2[i*2],"%02x",(unsigned char)md5_str[i]);
+//        }
+//        md5_str2[32]='\0';
+//        if(strcmp(md5_str2,global_md5)==0){
+//            LOGE("md5 check ok\n");
+//        }else{
+//            LOGE("md5 check failed\n");
+//        }
+//        free(md5_str);
+//        free(decoded_data);
+//        free(data_buffer_array);
+//        data_buffer_array=NULL;
+//    }
 }
 
 

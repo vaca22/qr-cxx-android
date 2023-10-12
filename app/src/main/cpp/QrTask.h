@@ -6,11 +6,13 @@
 #define QR_CXX_ANDROID_QRTASK_H
 
 
+#include "fec.h"
 
 class QrTask {
 public:
     static char global_md5[33];
     static char** data_buffer_array;
+    static FEC fec;
 
 private:
     int len;
@@ -18,7 +20,7 @@ private:
 
     void charsMd5(char * decoded_data,char * md5_str);
 
-    void decodeBase64Data(char *input_data, char *out_data);
+    int  decodeBase64Data(char *input_data, char *out_data);
 
     void parseJson(char *json);
 

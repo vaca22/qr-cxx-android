@@ -63,12 +63,12 @@ void QrTask::parseJson(char *json) {
     int index_int = index->valueint;
     int total_int = total->valueint;
 
-//    if(data_buffer_array==nullptr){
-//        data_buffer_array= static_cast<char **>(malloc(total_int * sizeof(char *)));
-//        for(int i=0;i<total_int;i++){
-//            data_buffer_array[i]=nullptr;
-//        }
-//    }
+    if(data_buffer_array==nullptr){
+        data_buffer_array= static_cast<char **>(malloc(total_int * sizeof(char *)));
+        for(int i=0;i<total_int;i++){
+            data_buffer_array[i]=nullptr;
+        }
+    }
     char *data_str = data->valuestring;
     char *full_data= static_cast<char *>(malloc(3*strlen(data_str) + 1));
     int sizex=decodeBase64Data(data_str,full_data);
@@ -83,14 +83,35 @@ void QrTask::parseJson(char *json) {
         pkt.flag=typeData;
     }
     auto recovered = fec.Input(pkt);
+    if(data_buffer_array[index_int]==nullptr){
+        if(index_int<39){
+            data_buffer_array[index_int]= reinterpret_cast<char *>(malloc(sizex));
+            memcpy(data_buffer_array[index_int],full_data,sizex);
+        }
+    }
     if(!recovered.empty()){
         LOGE("recovered:%u\n", recovered.size());
+        int n=0;
+        for(int i=0;i<39;i++){
+            if(data_buffer_array[i]==nullptr){
+
+                data_buffer_array[i]= reinterpret_cast<char *>(malloc(sizex));
+                memcpy(data_buffer_array[i],  recovered[n]->data(), sizex);
+                n++;
+            }
+        }
+
+        char*decoded_data= static_cast<char *>(malloc(sizex*39+1));
+        for(int i=0;i<39;i++){
+            unsigned char len=data_buffer_array[i][0];
+            memcpy(decoded_data+i*len,data_buffer_array[i]+1,len);
+            free(data_buffer_array[i]);
+        }
+        decoded_data[sizex*39]='\0';
+        LOGE("decoded_data:%s\n", decoded_data);
+        LOGE("n:%d\n", n);
     }
-//    if(data_buffer_array[index_int]==nullptr){
-//        data_buffer_array[index_int]= reinterpret_cast<char *>(malloc(strlen(data_str) + 1));
-//        strcpy(data_buffer_array[index_int],data_str);
-//        data_buffer_array[index_int][strlen(data_str)]='\0';
-//    }
+
 
     LOGE("index:%d\n", index_int);
 

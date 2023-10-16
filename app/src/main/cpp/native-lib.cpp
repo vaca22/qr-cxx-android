@@ -16,7 +16,8 @@ std::queue<unsigned char *> imgQueue;
 std::mutex mtx;
 std::condition_variable cv;
 bool stop = false;
-
+JavaVM *g_VM;
+jobject g_obj;
 
 void worker() {
     while (true) {
@@ -35,7 +36,17 @@ void worker() {
     }
 }
 
-
+//create a decode success callback
+void decodeSuccessCallback(char *decoded_data, int len) {
+    JNIEnv *env;
+    g_VM->AttachCurrentThread(&env, nullptr);
+    jstring jstr = env->NewStringUTF(decoded_data);
+    jclass clazz = env->GetObjectClass(g_obj);
+    jmethodID mid = env->GetMethodID(clazz, "decodeSuccess", "(Ljava/lang/String;)V");
+    env->CallVoidMethod(g_obj, mid, jstr);
+    env->DeleteLocalRef(jstr);
+    g_VM->DetachCurrentThread();
+}
 
 
 
@@ -62,6 +73,10 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_vaca_qr_1cxx_1android_MainActivity_initWorker(JNIEnv *env, jobject thiz) {
 
+    (*env).GetJavaVM(&g_VM);
+    g_obj = (*env).NewGlobalRef(thiz);
+
+    QrTask::setDecodeSuccessCallback(decodeSuccessCallback);
 
 
     std::vector<std::thread> threads;

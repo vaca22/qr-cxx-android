@@ -5,6 +5,7 @@
 #ifndef QR_CXX_ANDROID_QRTASK_H
 #define QR_CXX_ANDROID_QRTASK_H
 
+#include <mutex>
 #include "wirehair/wirehair.h"
 
 
@@ -13,6 +14,19 @@ public:
     static char global_md5[33];
     static bool isInit;
     static WirehairCodec decoder;
+    static bool isEnd;
+    static std::mutex mtx_decode;
+
+    //create a decode success callback
+    typedef void (*DecodeSuccessCallback)(char *decoded_data,int len);
+
+    static DecodeSuccessCallback decodeSuccessCallback;
+
+    //create a decode fail callback
+    typedef void (*DecodeFailCallback)();
+
+    static DecodeFailCallback decodeFailCallback;
+
 
 
 private:
@@ -34,6 +48,7 @@ public:
 
     void operator()();
 
+    static void setDecodeSuccessCallback(void (*callback)(char *, int));
 };
 
 

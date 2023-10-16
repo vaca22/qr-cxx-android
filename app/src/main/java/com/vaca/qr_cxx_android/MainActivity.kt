@@ -184,4 +184,10 @@ class MainActivity : AppCompatActivity() {
             System.loadLibrary("qr_cxx_android")
         }
     }
+
+    fun decodeSuccess(s:String){
+        runOnUiThread {
+            binding.sampleText.text=s
+        }
+    }
 }

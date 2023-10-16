@@ -33,7 +33,15 @@ using namespace std;
 
 char QrTask::global_md5[33];
 bool QrTask::isInit = false;
+bool QrTask::isEnd = false;
+std::mutex QrTask::mtx_decode;
 WirehairCodec QrTask::decoder;
+
+//create a decode success callback
+QrTask::DecodeSuccessCallback QrTask::decodeSuccessCallback = nullptr;
+
+//create a decode fail callback
+QrTask::DecodeFailCallback QrTask::decodeFailCallback = nullptr;
 
 
 
@@ -78,15 +86,18 @@ void QrTask::parseJson(char *json) {
             LOGE("decoder create ok\n");
         }
     }
+    if(isEnd){
+        return;
+    }
 
-    uint32_t writeLen = size_int;
+
     WirehairResult decodeResult = wirehair_decode(
             decoder,
             index_int,
             full_data,
-            writeLen);
-    LOGE("writeLen:%d\n", writeLen);
+            size_int);
     if (decodeResult == Wirehair_Success) {
+        isEnd = true;
         vector<uint8_t> decoded(total_int);
 
         // Recover original data on decoder side
@@ -94,6 +105,13 @@ void QrTask::parseJson(char *json) {
                 decoder,
                 &decoded[0],
                 total_int);
+        if (decodeResult != Wirehair_Success)
+        {
+            if (decodeFailCallback != nullptr) {
+                decodeFailCallback();
+            }
+            return;
+        }
         LOGE("decoded_data:%s\n", decoded.data());
         char*md5_str= static_cast<char *>(malloc(16));
         charsMd5(reinterpret_cast<char *>(decoded.data()), md5_str);
@@ -104,13 +122,24 @@ void QrTask::parseJson(char *json) {
         md5_str2[32]='\0';
         if(strcmp(md5_str2,global_md5)==0){
             LOGE("md5 check ok\n");
+            if (decodeSuccessCallback != nullptr) {
+                decodeSuccessCallback(reinterpret_cast<char *>(decoded.data()),total_int);
+            }
         }else{
             LOGE("md5 check failed\n");
+            if (decodeFailCallback != nullptr) {
+                decodeFailCallback();
+            }
         }
+        wirehair_free(decoder);
         free(md5_str);
     }
     if (decodeResult != Wirehair_NeedMore)
     {
+        //call fail callback
+        if (decodeFailCallback != nullptr) {
+            decodeFailCallback();
+        }
        LOGE("decodeResult:%d\n", decodeResult);
     }
 
@@ -119,6 +148,9 @@ void QrTask::parseJson(char *json) {
 
 
 void QrTask::operator()() {
+    if(QrTask::isEnd){
+        return;
+    }
     DecodeHints hints;
     hints.setTextMode(TextMode::HRI);
     hints.setEanAddOnSymbol(EanAddOnSymbol::Read);
@@ -134,6 +166,9 @@ void QrTask::operator()() {
     }
     ImageView image{buffer.get(), width, height, ImageFormat::RGB};
     try{
+        //lock mutex
+        std::lock_guard<std::mutex> lock(QrTask::mtx_decode);
+
         auto results = ReadBarcodes(image, hints);
         for (auto &&result: results) {
             parseJson(const_cast<char *>(result.text().c_str()));
@@ -144,4 +179,9 @@ void QrTask::operator()() {
     }
 
     delete[] buffer_data;
+}
+
+void QrTask::setDecodeSuccessCallback(void (*callback)(char *, int)) {
+    decodeSuccessCallback = callback;
+
 }

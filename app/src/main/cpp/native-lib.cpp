@@ -62,7 +62,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_vaca_qr_1cxx_1android_MainActivity_initWorker(JNIEnv *env, jobject thiz) {
 
-    QrTask::fec = FEC::New(250, 39, 30);
+
 
     std::vector<std::thread> threads;
     threads.reserve(8);

@@ -5,14 +5,15 @@
 #ifndef QR_CXX_ANDROID_QRTASK_H
 #define QR_CXX_ANDROID_QRTASK_H
 
+#include "wirehair/wirehair.h"
 
-#include "fec.h"
 
 class QrTask {
 public:
     static char global_md5[33];
-    static char** data_buffer_array;
-    static FEC fec;
+    static bool isInit;
+    static WirehairCodec decoder;
+
 
 private:
     int len;

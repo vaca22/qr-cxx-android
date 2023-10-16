@@ -191,6 +191,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            openCamera()
+
         }
         if (ContextCompat.checkSelfPermission(
                 this,

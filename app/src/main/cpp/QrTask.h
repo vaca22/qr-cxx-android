@@ -43,7 +43,7 @@ private:
     int len;
     unsigned char *buffer_data;
 
-    void charsMd5(char * decoded_data,char * md5_str);
+    void charsMd5(char * decoded_data,int len);
 
     int  decodeBase64Data(char *input_data, char *out_data);
 

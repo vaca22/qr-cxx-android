@@ -52,17 +52,17 @@ QrTask::DecodeFailCallback QrTask::decodeFailCallback = nullptr;
 QrTask::ProgressCallback QrTask::progressCallback = nullptr;
 
 
-void QrTask::charsMd5(char * decoded_data,char *md5_str2){
-    char  md5_str[16];
+void QrTask::charsMd5(char * decoded_data,int len){
+    char  md5_str_temp[16];
     mbedtls_md5_context ctx;
     mbedtls_md5_init(&ctx);
     mbedtls_md5_starts(&ctx);
-    mbedtls_md5_update(&ctx, (unsigned char *) decoded_data, strlen(decoded_data));
-    mbedtls_md5_finish(&ctx, (unsigned char *) md5_str);
+    mbedtls_md5_update(&ctx, (unsigned char *) decoded_data, len);
+    mbedtls_md5_finish(&ctx, (unsigned char *) md5_str_temp);
     for(int i=0;i<16;i++){
-        sprintf(&md5_str2[i*2],"%02x",(unsigned char)md5_str[i]);
+        sprintf(&md5_str[i*2],"%02x",(unsigned char)md5_str_temp[i]);
     }
-    md5_str2[32]='\0';
+    md5_str[32]='\0';
     mbedtls_md5_free(&ctx);
 }
 
@@ -83,7 +83,7 @@ void QrTask::parseJson(char *json) {
     int index_int = index->valueint;
     int total_int = total->valueint;
     char *data_str = data->valuestring;
-    char *full_data= static_cast<char *>(malloc(3*strlen(data_str) + 1));
+    char *full_data= static_cast<char *>(malloc(2*strlen(data_str) + 1));
     int size_int=decodeBase64Data(data_str, full_data);
     if(index_int>last_progress){
         last_progress=index_int;
@@ -134,7 +134,7 @@ void QrTask::parseJson(char *json) {
         }
       //  LOGE("decoded_data:%s\n", decoded.data());
 
-        charsMd5(reinterpret_cast<char *>(decoded.data()), md5_str);
+        charsMd5(reinterpret_cast<char *>(decoded.data()), total_int);
         LOGE("md5_str2:%s\n", md5_str);
         if(strcmp(md5_str,global_md5)==0){
             LOGE("md5 check ok\n");

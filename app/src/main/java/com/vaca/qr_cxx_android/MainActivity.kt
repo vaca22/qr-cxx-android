@@ -206,7 +206,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun decodeSuccess(b: ByteArray){
-        val file= File(PathUtil.getPathX("file2.txt"))
+        val file= File(PathUtil.getPathX("file2.pdf"))
         file.writeBytes(b)
         runOnUiThread {
             binding.sampleText.text="success"

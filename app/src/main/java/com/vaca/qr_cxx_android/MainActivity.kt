@@ -199,17 +199,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun decodeSuccess(s:String){
-        runOnUiThread {
-            binding.sampleText.text=s
-        }
-    }
 
     fun decodeSuccess(b: ByteArray){
         val file= File(PathUtil.getPathX("file2.pdf"))
         file.writeBytes(b)
         runOnUiThread {
-            binding.sampleText.text="success"
+            binding.hint.text="md5 check success"
         }
     }
 

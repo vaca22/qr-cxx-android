@@ -172,12 +172,22 @@ class MainActivity : AppCompatActivity() {
 
         startBackgroundThread()
         openCamera()
+
+
+        //update progress every 1 s
+        Thread{
+            while(true){
+                Thread.sleep(200)
+                updateProgress(getProgress())
+            }
+        }.start()
     }
 
 
 
     external fun inputImage(b:ByteArray)
     external fun initWorker()
+    external fun getProgress():Int
 
     companion object {
         init {
@@ -188,6 +198,12 @@ class MainActivity : AppCompatActivity() {
     fun decodeSuccess(s:String){
         runOnUiThread {
             binding.sampleText.text=s
+        }
+    }
+
+    fun updateProgress(progress:Int){
+        runOnUiThread {
+            binding.pro.progress=progress
         }
     }
 }

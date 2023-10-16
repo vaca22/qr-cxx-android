@@ -36,6 +36,9 @@ bool QrTask::isInit = false;
 bool QrTask::isEnd = false;
 std::mutex QrTask::mtx_decode;
 WirehairCodec QrTask::decoder;
+int QrTask::progress_num = 0;
+int QrTask::last_progress = -1;
+int QrTask::progress = 0;
 
 //create a decode success callback
 QrTask::DecodeSuccessCallback QrTask::decodeSuccessCallback = nullptr;
@@ -43,6 +46,9 @@ QrTask::DecodeSuccessCallback QrTask::decodeSuccessCallback = nullptr;
 //create a decode fail callback
 QrTask::DecodeFailCallback QrTask::decodeFailCallback = nullptr;
 
+
+//create a progress callback
+QrTask::ProgressCallback QrTask::progressCallback = nullptr;
 
 
 void QrTask::charsMd5(char * decoded_data,char * md5_str){
@@ -73,6 +79,14 @@ void QrTask::parseJson(char *json) {
     char *data_str = data->valuestring;
     char *full_data= static_cast<char *>(malloc(3*strlen(data_str) + 1));
     int size_int=decodeBase64Data(data_str, full_data);
+    if(index_int>last_progress){
+        last_progress=index_int;
+        progress_num++;
+        progress=progress_num*100*size_int/total_int;
+    }
+
+
+
     if(!QrTask::isInit){
         QrTask::isInit=true;
         LOGE("init\n");
@@ -165,18 +179,14 @@ void QrTask::operator()() {
         return;
     }
     ImageView image{buffer.get(), width, height, ImageFormat::RGB};
-    try{
-        //lock mutex
-        std::lock_guard<std::mutex> lock(QrTask::mtx_decode);
-
+    {
+        std::unique_lock<std::mutex> lock(QrTask::mtx_decode);
         auto results = ReadBarcodes(image, hints);
         for (auto &&result: results) {
             parseJson(const_cast<char *>(result.text().c_str()));
         }
     }
-    catch (const std::exception &e) {
-        LOGE("Error: %s", e.what());
-    }
+
 
     delete[] buffer_data;
 }
@@ -184,4 +194,13 @@ void QrTask::operator()() {
 void QrTask::setDecodeSuccessCallback(void (*callback)(char *, int)) {
     decodeSuccessCallback = callback;
 
+}
+
+void QrTask::setProgressCallback(void (*callback)(int)) {
+    progressCallback = callback;
+
+}
+
+jint QrTask::getProgress() {
+    return progress;
 }

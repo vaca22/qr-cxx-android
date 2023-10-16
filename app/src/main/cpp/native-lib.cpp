@@ -50,6 +50,8 @@ void decodeSuccessCallback(char *decoded_data, int len) {
 
 
 
+
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_vaca_qr_1cxx_1android_MainActivity_inputImage(JNIEnv *env, jobject thiz, jbyteArray b) {
@@ -79,6 +81,7 @@ Java_com_vaca_qr_1cxx_1android_MainActivity_initWorker(JNIEnv *env, jobject thiz
     QrTask::setDecodeSuccessCallback(decodeSuccessCallback);
 
 
+
     std::vector<std::thread> threads;
     threads.reserve(8);
     for (int i = 0; i < 8; ++i) {
@@ -93,4 +96,10 @@ Java_com_vaca_qr_1cxx_1android_MainActivity_initWorker(JNIEnv *env, jobject thiz
     for (auto &t: threads) {
         t.detach();
     }
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_vaca_qr_1cxx_1android_MainActivity_getProgress(JNIEnv *env, jobject thiz) {
+    return QrTask::getProgress();
 }

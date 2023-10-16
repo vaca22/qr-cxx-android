@@ -6,6 +6,7 @@
 #define QR_CXX_ANDROID_QRTASK_H
 
 #include <mutex>
+#include <jni.h>
 #include "wirehair/wirehair.h"
 
 
@@ -16,6 +17,9 @@ public:
     static WirehairCodec decoder;
     static bool isEnd;
     static std::mutex mtx_decode;
+    static int progress_num;
+    static int last_progress;
+    static int progress;
 
     //create a decode success callback
     typedef void (*DecodeSuccessCallback)(char *decoded_data,int len);
@@ -26,6 +30,11 @@ public:
     typedef void (*DecodeFailCallback)();
 
     static DecodeFailCallback decodeFailCallback;
+
+    //create a progress callback
+    typedef void (*ProgressCallback)(int progress);
+
+    static ProgressCallback progressCallback;
 
 
 
@@ -49,6 +58,10 @@ public:
     void operator()();
 
     static void setDecodeSuccessCallback(void (*callback)(char *, int));
+
+    static void setProgressCallback(void (*callback)(int));
+
+    static jint getProgress();
 };
 
 

@@ -1,18 +1,26 @@
 package com.vaca.qr_cxx_android
 
+import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.hardware.camera2.*
 import android.media.Image
 import android.media.ImageReader
+import android.net.Uri
 import android.os.Build.VERSION_CODES.P
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.Settings
 import android.util.Size
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.vaca.qr_cxx_android.databinding.ActivityMainBinding
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -166,16 +174,38 @@ class MainActivity : AppCompatActivity() {
 
 
 
-        //read assets file
-        val inputStream = assets.open("dd22.jpg")
-        val size = inputStream.available()
-        val buffer = ByteArray(size)
-        inputStream.read(buffer)
-        inputStream.close()
-       // binding.sampleText.text = qr(buffer).toString()
 
         startBackgroundThread()
-        openCamera()
+
+        val requestLocationPermission = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) {
+            for(k in it){
+                if(!k.value){
+                    Toast.makeText(this,"需要相机权限", Toast.LENGTH_LONG).show()
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    val uri = Uri.fromParts("package", packageName, null)
+                    intent.data = uri
+                    startActivity(intent)
+                    break;
+                }
+            }
+
+        }
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestLocationPermission.launch(
+                arrayOf(
+                    Manifest.permission.CAMERA
+                )
+            )
+        }else{
+            openCamera()
+        }
+
 
 
         //update progress every 1 s

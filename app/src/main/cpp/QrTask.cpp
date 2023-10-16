@@ -85,7 +85,7 @@ void QrTask::parseJson(char *json) {
     char *data_str = data->valuestring;
     char *full_data= static_cast<char *>(malloc(2*strlen(data_str) + 1));
     int size_int=decodeBase64Data(data_str, full_data);
-    if(index_int>last_progress){
+    if(index_int!=last_progress){
         last_progress=index_int;
         progress_num++;
         progress=progress_num*100*size_int/total_int;
@@ -173,7 +173,7 @@ void QrTask::operator()() {
     DecodeHints hints;
     hints.setTextMode(TextMode::HRI);
     hints.setEanAddOnSymbol(EanAddOnSymbol::Read);
-    hints.setMaxNumberOfSymbols(1);
+    hints.setMaxNumberOfSymbols(2);
     hints.setFormats(BarcodeFormat::QRCode);
     int width, height, channels;
     std::unique_ptr<stbi_uc, void (*)(void *)> buffer(stbi_load_from_memory(
@@ -190,6 +190,7 @@ void QrTask::operator()() {
         for (auto &&result: results) {
             parseJson(const_cast<char *>(result.text().c_str()));
         }
+        LOGE("size:%d\n", results.size());
     }
 
 

@@ -7,6 +7,7 @@ import android.graphics.YuvImage
 import android.hardware.camera2.*
 import android.media.Image
 import android.media.ImageReader
+import android.os.Build.VERSION_CODES.P
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
@@ -14,6 +15,7 @@ import android.os.HandlerThread
 import android.util.Size
 import com.vaca.qr_cxx_android.databinding.ActivityMainBinding
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -155,6 +157,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        PathUtil.initVar(this)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -198,6 +202,14 @@ class MainActivity : AppCompatActivity() {
     fun decodeSuccess(s:String){
         runOnUiThread {
             binding.sampleText.text=s
+        }
+    }
+
+    fun decodeSuccess(b: ByteArray){
+        val file= File(PathUtil.getPathX("file2.txt"))
+        file.writeBytes(b)
+        runOnUiThread {
+            binding.sampleText.text="success"
         }
     }
 

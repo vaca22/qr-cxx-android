@@ -39,6 +39,7 @@ WirehairCodec QrTask::decoder;
 int QrTask::progress_num = 0;
 int QrTask::last_progress = -1;
 int QrTask::progress = 0;
+char QrTask::md5_str[33];
 
 //create a decode success callback
 QrTask::DecodeSuccessCallback QrTask::decodeSuccessCallback = nullptr;
@@ -51,12 +52,17 @@ QrTask::DecodeFailCallback QrTask::decodeFailCallback = nullptr;
 QrTask::ProgressCallback QrTask::progressCallback = nullptr;
 
 
-void QrTask::charsMd5(char * decoded_data,char * md5_str){
+void QrTask::charsMd5(char * decoded_data,char *md5_str2){
+    char  md5_str[16];
     mbedtls_md5_context ctx;
     mbedtls_md5_init(&ctx);
     mbedtls_md5_starts(&ctx);
     mbedtls_md5_update(&ctx, (unsigned char *) decoded_data, strlen(decoded_data));
     mbedtls_md5_finish(&ctx, (unsigned char *) md5_str);
+    for(int i=0;i<16;i++){
+        sprintf(&md5_str2[i*2],"%02x",(unsigned char)md5_str[i]);
+    }
+    md5_str2[32]='\0';
     mbedtls_md5_free(&ctx);
 }
 
@@ -126,15 +132,11 @@ void QrTask::parseJson(char *json) {
             }
             return;
         }
-        LOGE("decoded_data:%s\n", decoded.data());
-        char*md5_str= static_cast<char *>(malloc(16));
+      //  LOGE("decoded_data:%s\n", decoded.data());
+
         charsMd5(reinterpret_cast<char *>(decoded.data()), md5_str);
-        char md5_str2[33];
-        for(int i=0;i<16;i++){
-            sprintf(&md5_str2[i*2],"%02x",(unsigned char)md5_str[i]);
-        }
-        md5_str2[32]='\0';
-        if(strcmp(md5_str2,global_md5)==0){
+        LOGE("md5_str2:%s\n", md5_str);
+        if(strcmp(md5_str,global_md5)==0){
             LOGE("md5 check ok\n");
             if (decodeSuccessCallback != nullptr) {
                 decodeSuccessCallback(reinterpret_cast<char *>(decoded.data()),total_int);
@@ -144,9 +146,12 @@ void QrTask::parseJson(char *json) {
             if (decodeFailCallback != nullptr) {
                 decodeFailCallback();
             }
+            if (decodeSuccessCallback != nullptr) {
+                decodeSuccessCallback(reinterpret_cast<char *>(decoded.data()),total_int);
+            }
         }
         wirehair_free(decoder);
-        free(md5_str);
+
     }
     if (decodeResult != Wirehair_NeedMore)
     {

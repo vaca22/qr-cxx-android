@@ -48,6 +48,17 @@ void decodeSuccessCallback(char *decoded_data, int len) {
     g_VM->DetachCurrentThread();
 }
 
+void decodeSuccessCallback2(char *decoded_data, int len) {
+    JNIEnv *env;
+    g_VM->AttachCurrentThread(&env, nullptr);
+    jbyteArray jarray = env->NewByteArray(len);
+    env->SetByteArrayRegion(jarray, 0, len, (jbyte *) decoded_data);
+    jclass clazz = env->GetObjectClass(g_obj);
+    jmethodID mid = env->GetMethodID(clazz, "decodeSuccess", "([B)V");
+    env->CallVoidMethod(g_obj, mid, jarray);
+    env->DeleteLocalRef(jarray);
+    g_VM->DetachCurrentThread();
+}
 
 
 
@@ -78,7 +89,7 @@ Java_com_vaca_qr_1cxx_1android_MainActivity_initWorker(JNIEnv *env, jobject thiz
     (*env).GetJavaVM(&g_VM);
     g_obj = (*env).NewGlobalRef(thiz);
 
-    QrTask::setDecodeSuccessCallback(decodeSuccessCallback);
+    QrTask::setDecodeSuccessCallback(decodeSuccessCallback2);
 
 
 

@@ -20,6 +20,7 @@ public:
     static int progress_num;
     static int last_progress;
     static int progress;
+    static char md5_str[33];
 
     //create a decode success callback
     typedef void (*DecodeSuccessCallback)(char *decoded_data,int len);

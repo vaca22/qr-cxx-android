@@ -166,9 +166,6 @@ void QrTask::parseJson(char *json) {
             if (decodeFailCallback != nullptr) {
                 decodeFailCallback();
             }
-            if (decodeSuccessCallback != nullptr) {
-                decodeSuccessCallback(reinterpret_cast<char *>(decoded.data()),total_int);
-            }
         }
         wirehair_free(decoder);
 

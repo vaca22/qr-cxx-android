@@ -41,6 +41,9 @@ int QrTask::last_progress = -1;
 int QrTask::progress = 0;
 char QrTask::md5_str[33];
 
+int *QrTask::index_list=nullptr;
+int QrTask::index_list_len=0;
+
 //create a decode success callback
 QrTask::DecodeSuccessCallback QrTask::decodeSuccessCallback = nullptr;
 
@@ -81,6 +84,23 @@ void QrTask::parseJson(char *json) {
     cJSON *md5 = cJSON_GetObjectItem(root, "md5");
     cJSON *total = cJSON_GetObjectItem(root, "total");
     int index_int = index->valueint;
+
+    if(!QrTask::isInit) {
+        index_list= static_cast<int *>(malloc(4 * total->valueint * 20));
+        index_list_len=0;
+    }
+    //check if index_int in index_vector
+    for(int i=0;i<index_list_len;i++){
+        if(index_list[i]==index_int){
+            LOGE("index %d is in index_vector\n",index_int);
+            return;
+        }
+    }
+    index_list[index_list_len]=index_int;
+    index_list_len++;
+//    LOGE("index %d is not in index_vector\n",index_int);
+
+
     int total_int = total->valueint;
     char *data_str = data->valuestring;
     char *full_data= static_cast<char *>(malloc(2*strlen(data_str) + 1));

@@ -8,7 +8,8 @@
 #include <mutex>
 #include <jni.h>
 #include "wirehair/wirehair.h"
-
+#include <vector>
+using namespace std;
 
 class QrTask {
 public:
@@ -42,6 +43,9 @@ public:
 private:
     int len;
     unsigned char *buffer_data;
+
+    static int *index_list;
+    static int index_list_len;
 
     void charsMd5(char * decoded_data,int len);
 

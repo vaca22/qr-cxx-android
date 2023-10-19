@@ -403,7 +403,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 			dimension = version->dimension();
 			mod2Pix = Mod2Pix(dimension, brOffset, {fp.tl, fp.tr, br, fp.bl});
 		}
-#if 1
+#if 0
 		auto& apM = version->alignmentPatternCenters(); // alignment pattern positions in modules
 		auto apP = Matrix<std::optional<PointF>>(Size(apM), Size(apM)); // found/guessed alignment pattern positions in pixels
 		const int N = Size(apM) - 1;

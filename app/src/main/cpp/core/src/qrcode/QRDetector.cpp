@@ -379,7 +379,7 @@ DetectorResult QRDetector::SampleQR(const BitMatrix& image, const FinderPatternS
 			dimension = version->dimension();
 			mod2Pix = Mod2Pix(dimension, brOffset, {fp.tl, fp.tr, br, fp.bl});
 		}
-#if 1
+#if 0
 
 		auto& apM = version->alignmentPatternCenters(); // alignment pattern positions in modules
 		auto apP = Matrix<std::optional<PointF>>(Size(apM), Size(apM)); // found/guessed alignment pattern positions in pixels
@@ -416,7 +416,6 @@ DetectorResult QRDetector::SampleQR(const BitMatrix& image, const FinderPatternS
 				if (auto found = LocateAlignmentPattern(image, moduleSize, guessed))
 					apP.set(x, y, *found);
 			}
-		LOGE("n97");
 		// go over the whole set of alignment patters again and try to fill any remaining gap by using available neighbors as guides
 		for (int y = 0; y <= N; ++y)
 			for (int x = 0; x <= N; ++x) {
@@ -441,6 +440,7 @@ DetectorResult QRDetector::SampleQR(const BitMatrix& image, const FinderPatternS
 						}
 					}
 				}
+                LOGE("你8");
 
 				// if we found 2 each, intersect the two lines that are formed by connecting the point pairs
 				if (Size(hori) == 2 && Size(verti) == 2) {
@@ -451,7 +451,6 @@ DetectorResult QRDetector::SampleQR(const BitMatrix& image, const FinderPatternS
 					apP.set(x, y, found ? *found : guessed);
 				}
 			}
-		LOGE("n99");
 		if (auto c = apP.get(N, N))
 			mod2Pix = Mod2Pix(dimension, PointF(3, 3), {fp.tl, fp.tr, *c, fp.bl});
 
@@ -465,7 +464,6 @@ DetectorResult QRDetector::SampleQR(const BitMatrix& image, const FinderPatternS
 				printf("locate failed at %dx%d\n", x, y);
 				apP.set(x, y, projectM2P(x, y));
 			}
-        LOGE("n10");
 #ifdef PRINT_DEBUG
 		for (int y = 0; y <= N; ++y)
 			for (int x = 0; x <= N; ++x)
@@ -481,7 +479,6 @@ DetectorResult QRDetector::SampleQR(const BitMatrix& image, const FinderPatternS
 								PerspectiveTransform{Rectangle(x0, x1, y0, y1),
 													 {*apP(x, y), *apP(x + 1, y), *apP(x + 1, y + 1), *apP(x, y + 1)}}});
 			}
-        LOGE("n11");
 		return SampleGrid(image, dimension, dimension, rois);
 #endif
 	}

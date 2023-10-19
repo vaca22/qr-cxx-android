@@ -38,8 +38,7 @@ namespace ZXing::QRCode {
 constexpr auto PATTERN = FixedPattern<5, 7>{1, 1, 3, 1, 1};
 constexpr bool E2E = true;
 
-PatternView FindPattern(const PatternView& view)
-{
+PatternView QRDetector::FindPattern(const PatternView& view) const {
 	return FindLeftGuard<PATTERN.size()>(view, PATTERN.size(), [](const PatternView& view, int spaceInPixel) {
 		// perform a fast plausability test for 1:1:3:1:1 pattern
 		if (view[2] < 2 * std::max(view[0], view[4]) || view[2] < std::max(view[1], view[3]))
@@ -48,8 +47,7 @@ PatternView FindPattern(const PatternView& view)
 	});
 }
 
-std::vector<ConcentricPattern> FindFinderPatterns(const BitMatrix& image, bool tryHarder)
-{
+std::vector<ConcentricPattern> QRDetector::FindFinderPatterns(const BitMatrix& image, bool tryHarder) const {
 	constexpr int MIN_SKIP         = 3;           // 1 pixel/module times 3 modules/center
 	constexpr int MAX_MODULES_FAST = 20 * 4 + 17; // support up to version 20 for mobile clients
 
@@ -106,8 +104,7 @@ std::vector<ConcentricPattern> FindFinderPatterns(const BitMatrix& image, bool t
  * @param patterns list of ConcentricPattern objects, i.e. found finder pattern squares
  * @return list of plausible finder pattern sets, sorted by decreasing plausibility
  */
-FinderPatternSets GenerateFinderPatternSets(FinderPatterns& patterns)
-{
+QRDetector::FinderPatternSets QRDetector::GenerateFinderPatternSets(FinderPatterns& patterns) const {
 	std::sort(patterns.begin(), patterns.end(), [](const auto& a, const auto& b) { return a.size < b.size; });
 
 	auto sets            = std::multimap<double, FinderPatternSet>();
@@ -202,8 +199,7 @@ FinderPatternSets GenerateFinderPatternSets(FinderPatterns& patterns)
 	return res;
 }
 
-static double EstimateModuleSize(const BitMatrix& image, ConcentricPattern a, ConcentricPattern b)
-{
+double QRDetector::EstimateModuleSize(const BitMatrix& image, ConcentricPattern a, ConcentricPattern b) const {
 	BitMatrixCursorF cur(image, a, b - a);
 	assert(cur.isBlack());
 
@@ -214,15 +210,9 @@ static double EstimateModuleSize(const BitMatrix& image, ConcentricPattern a, Co
 	return (2 * Reduce(*pattern) - (*pattern)[0] - (*pattern)[4]) / 12.0 * length(cur.d);
 }
 
-struct DimensionEstimate
-{
-	int dim = 0;
-	double ms = 0;
-	int err = 4;
-};
 
-static DimensionEstimate EstimateDimension(const BitMatrix& image, ConcentricPattern a, ConcentricPattern b)
-{
+
+QRDetector::DimensionEstimate QRDetector::EstimateDimension(const BitMatrix& image, ConcentricPattern a, ConcentricPattern b) const {
 	auto ms_a = EstimateModuleSize(image, a, b);
 	auto ms_b = EstimateModuleSize(image, b, a);
 
@@ -237,8 +227,7 @@ static DimensionEstimate EstimateDimension(const BitMatrix& image, ConcentricPat
 	return {dimension + error, moduleSize, std::abs(error)};
 }
 
-static RegressionLine TraceLine(const BitMatrix& image, PointF p, PointF d, int edge)
-{
+RegressionLine QRDetector::TraceLine(const BitMatrix& image, PointF p, PointF d, int edge) const {
 	BitMatrixCursorF cur(image, p, d - p);
 	RegressionLine line;
 	line.setDirectionInward(cur.back());
@@ -277,22 +266,19 @@ static RegressionLine TraceLine(const BitMatrix& image, PointF p, PointF d, int 
 }
 
 // estimate how tilted the symbol is (return value between 1 and 2, see also above)
-static double EstimateTilt(const FinderPatternSet& fp)
-{
+double QRDetector::EstimateTilt(const FinderPatternSet& fp) const {
 	int min = std::min({fp.bl.size, fp.tl.size, fp.tr.size});
 	int max = std::max({fp.bl.size, fp.tl.size, fp.tr.size});
 	return double(max) / min;
 }
 
-static PerspectiveTransform Mod2Pix(int dimension, PointF brOffset, QuadrilateralF pix)
-{
+PerspectiveTransform QRDetector::Mod2Pix(int dimension, PointF brOffset, QuadrilateralF pix) const {
 	auto quad = Rectangle(dimension, dimension, 3.5);
 	quad[2] = quad[2] - brOffset;
 	return {quad, pix};
 }
 
-static std::optional<PointF> LocateAlignmentPattern(const BitMatrix& image, int moduleSize, PointF estimate)
-{
+std::optional<PointF> QRDetector::LocateAlignmentPattern(const BitMatrix& image, int moduleSize, PointF estimate) const {
 	log(estimate, 4);
 
 	for (auto d : {PointF{0, 0}, {0, -1}, {0, 1}, {-1, 0}, {1, 0}, {-1, -1}, {1, -1}, {1, 1}, {-1, 1},
@@ -319,8 +305,7 @@ static std::optional<PointF> LocateAlignmentPattern(const BitMatrix& image, int 
 	return {};
 }
 
-static const Version* ReadVersion(const BitMatrix& image, int dimension, const PerspectiveTransform& mod2Pix)
-{
+const Version * QRDetector::ReadVersion(const BitMatrix& image, int dimension, const PerspectiveTransform& mod2Pix) const {
 	int bits[2] = {};
 
 	for (bool mirror : {false, true}) {
@@ -341,22 +326,18 @@ static const Version* ReadVersion(const BitMatrix& image, int dimension, const P
 
 	return Version::DecodeVersionInformation(bits[0], bits[1]);
 }
-
-DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
-{
+#include <android/log.h>
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "vaca", __VA_ARGS__)
+DetectorResult QRDetector::SampleQR(const BitMatrix& image, const FinderPatternSet& fp) const {
 	auto top  = EstimateDimension(image, fp.tl, fp.tr);
 	auto left = EstimateDimension(image, fp.tl, fp.bl);
-
 	if (!top.dim && !left.dim)
 		return {};
-
 	auto best = top.err == left.err ? (top.dim > left.dim ? top : left) : (top.err < left.err ? top : left);
 	int dimension = best.dim;
 	int moduleSize = static_cast<int>(best.ms + 1);
-
 	auto br = PointF{-1, -1};
 	auto brOffset = PointF{3, 3};
-
 	// Everything except version 1 (21 modules) has an alignment pattern. Estimate the center of that by intersecting
 	// line extensions of the 1 module wide square around the finder patterns. This could also help with detecting
 	// slanted symbols of version 1.
@@ -367,7 +348,6 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 	auto bl3 = TraceLine(image, fp.bl, fp.tl, 3);
 	auto tr2 = TraceLine(image, fp.tr, fp.tl, 2);
 	auto tr3 = TraceLine(image, fp.tr, fp.tl, 3);
-
 	if (bl2.isValid() && tr2.isValid() && bl3.isValid() && tr3.isValid()) {
 		// intersect both outer and inner line pairs and take the center point between the two intersection points
 		auto brInter = (intersect(bl2, tr2) + intersect(bl3, tr3)) / 2;
@@ -382,19 +362,15 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 		if (!image.isIn(br) && (EstimateTilt(fp) > 1.1 || (bl2.isHighRes() && bl3.isHighRes() && tr2.isHighRes() && tr3.isHighRes())))
 			br = brInter;
 	}
-
 	// otherwise the simple estimation used by upstream is used as a best guess fallback
 	if (!image.isIn(br)) {
 		br = fp.tr - fp.tl + fp.bl;
 		brOffset = PointF(0, 0);
 	}
-
 	log(br, 3);
 	auto mod2Pix = Mod2Pix(dimension, brOffset, {fp.tl, fp.tr, br, fp.bl});
-
 	if( dimension >= Version::DimensionOfVersion(7, false)) {
 		auto version = ReadVersion(image, dimension, mod2Pix);
-
 		// if the version bits are garbage -> discard the detection
 		if (!version || std::abs(version->dimension() - dimension) > 8)
 			return DetectorResult();
@@ -404,6 +380,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 			mod2Pix = Mod2Pix(dimension, brOffset, {fp.tl, fp.tr, br, fp.bl});
 		}
 #if 1
+
 		auto& apM = version->alignmentPatternCenters(); // alignment pattern positions in modules
 		auto apP = Matrix<std::optional<PointF>>(Size(apM), Size(apM)); // found/guessed alignment pattern positions in pixels
 		const int N = Size(apM) - 1;
@@ -439,24 +416,30 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 				if (auto found = LocateAlignmentPattern(image, moduleSize, guessed))
 					apP.set(x, y, *found);
 			}
-
+		LOGE("n97");
 		// go over the whole set of alignment patters again and try to fill any remaining gap by using available neighbors as guides
 		for (int y = 0; y <= N; ++y)
 			for (int x = 0; x <= N; ++x) {
-				if (apP(x, y))
+				if (apP(x, y).has_value())
 					continue;
 
 				// find the two closest valid alignment pattern pixel positions both horizontally and vertically
 				std::vector<PointF> hori, verti;
 				for (int i = 2; i < 2 * N + 2 && Size(hori) < 2; ++i) {
 					int xi = x + i / 2 * (i%2 ? 1 : -1);
-					if (0 <= xi && xi <= N && apP(xi, y))
-						hori.push_back(*apP(xi, y));
+					if (0 <= xi && xi <= N && apP(xi, y)){
+						if(apP(xi,y).has_value()){
+							hori.push_back(apP(xi, y).value());
+						}
+					}
 				}
 				for (int i = 2; i < 2 * N + 2 && Size(verti) < 2; ++i) {
 					int yi = y + i / 2 * (i%2 ? 1 : -1);
-					if (0 <= yi && yi <= N && apP(x, yi))
-						verti.push_back(*apP(x, yi));
+					if (0 <= yi && yi <= N && apP(x, yi)){
+						if(apP(x,yi).has_value()){
+							verti.push_back(apP(x, yi).value());
+						}
+					}
 				}
 
 				// if we found 2 each, intersect the two lines that are formed by connecting the point pairs
@@ -468,7 +451,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 					apP.set(x, y, found ? *found : guessed);
 				}
 			}
-
+		LOGE("n99");
 		if (auto c = apP.get(N, N))
 			mod2Pix = Mod2Pix(dimension, PointF(3, 3), {fp.tl, fp.tr, *c, fp.bl});
 
@@ -482,7 +465,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 				printf("locate failed at %dx%d\n", x, y);
 				apP.set(x, y, projectM2P(x, y));
 			}
-
+        LOGE("n10");
 #ifdef PRINT_DEBUG
 		for (int y = 0; y <= N; ++y)
 			for (int x = 0; x <= N; ++x)
@@ -498,7 +481,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 								PerspectiveTransform{Rectangle(x0, x1, y0, y1),
 													 {*apP(x, y), *apP(x + 1, y), *apP(x + 1, y + 1), *apP(x, y + 1)}}});
 			}
-
+        LOGE("n11");
 		return SampleGrid(image, dimension, dimension, rois);
 #endif
 	}
@@ -512,8 +495,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 * around it. This is a specialized method that works exceptionally fast in this special
 * case.
 */
-DetectorResult DetectPureQR(const BitMatrix& image)
-{
+DetectorResult QRDetector::DetectPureQR(const BitMatrix& image) const {
 	using Pattern = std::array<PatternView::value_type, PATTERN.size()>;
 
 #ifdef PRINT_DEBUG
@@ -561,8 +543,7 @@ DetectorResult DetectPureQR(const BitMatrix& image)
 			{{left, top}, {right, top}, {right, bottom}, {left, bottom}}};
 }
 
-DetectorResult DetectPureMQR(const BitMatrix& image)
-{
+DetectorResult QRDetector::DetectPureMQR(const BitMatrix& image) const {
 	using Pattern = std::array<PatternView::value_type, PATTERN.size()>;
 
 	constexpr int MIN_MODULES = Version::DimensionOfVersion(1, true);
@@ -601,8 +582,7 @@ DetectorResult DetectPureMQR(const BitMatrix& image)
 			{{left, top}, {right, top}, {right, bottom}, {left, bottom}}};
 }
 
-DetectorResult SampleMQR(const BitMatrix& image, const ConcentricPattern& fp)
-{
+DetectorResult QRDetector::SampleMQR(const BitMatrix& image, const ConcentricPattern& fp) const {
 	auto fpQuad = FindConcentricPatternCorners(image, fp, fp.size, 2);
 	if (!fpQuad)
 		return {};

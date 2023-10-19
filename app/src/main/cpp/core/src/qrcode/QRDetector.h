@@ -9,6 +9,9 @@
 
 #include "ConcentricFinder.h"
 #include "DetectorResult.h"
+#include "RegressionLine.h"
+#include "PerspectiveTransform.h"
+#include "QRVersion.h"
 
 #include <vector>
 
@@ -19,22 +22,56 @@ class BitMatrix;
 
 namespace QRCode {
 
-struct FinderPatternSet
-{
-	ConcentricPattern bl, tl, tr;
-};
+	class QRDetector {
+ 	public:
+		struct FinderPatternSet {
+			ConcentricPattern bl, tl, tr;
+		};
+		struct DimensionEstimate
+		{
+			int dim = 0;
+			double ms = 0;
+			int err = 4;
+		};
 
-using FinderPatterns = std::vector<ConcentricPattern>;
-using FinderPatternSets = std::vector<FinderPatternSet>;
+		using FinderPatterns = std::vector<ConcentricPattern>;
+		using FinderPatternSets = std::vector<FinderPatternSet>;
 
-FinderPatterns FindFinderPatterns(const BitMatrix& image, bool tryHarder);
-FinderPatternSets GenerateFinderPatternSets(FinderPatterns& patterns);
+		FinderPatterns FindFinderPatterns(const BitMatrix &image, bool tryHarder) const;
 
-DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp);
-DetectorResult SampleMQR(const BitMatrix& image, const ConcentricPattern& fp);
+		FinderPatternSets GenerateFinderPatternSets(FinderPatterns &patterns) const;
 
-DetectorResult DetectPureQR(const BitMatrix& image);
-DetectorResult DetectPureMQR(const BitMatrix& image);
+		DetectorResult SampleQR(const BitMatrix &image, const FinderPatternSet &fp) const;
 
-} // QRCode
+		DetectorResult SampleMQR(const BitMatrix &image, const ConcentricPattern &fp) const;
+
+		DetectorResult DetectPureQR(const BitMatrix &image) const;
+
+		DetectorResult DetectPureMQR(const BitMatrix &image) const;
+
+		PatternView FindPattern(const PatternView &view) const;
+
+		double EstimateModuleSize(const BitMatrix &image, ConcentricPattern a, ConcentricPattern b) const;
+
+
+
+
+		ZXing::RegressionLine TraceLine(const BitMatrix &image, PointF p, PointF d, int edge) const;
+
+		double EstimateTilt(const FinderPatternSet &fp) const;
+
+		ZXing::PerspectiveTransform Mod2Pix(int dimension, PointF brOffset, QuadrilateralF pix) const;
+
+		std::optional<PointF>
+		LocateAlignmentPattern(const BitMatrix &image, int moduleSize, PointF estimate) const;
+
+		const Version *
+		ReadVersion(const BitMatrix &image, int dimension, const PerspectiveTransform &mod2Pix) const;
+
+		DimensionEstimate
+		EstimateDimension(const BitMatrix &image, ConcentricPattern a, ConcentricPattern b) const;
+	};
+
+}
+// QRCode
 } // ZXing

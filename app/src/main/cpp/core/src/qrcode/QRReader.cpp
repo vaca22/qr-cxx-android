@@ -23,6 +23,7 @@ namespace ZXing::QRCode {
 
 Result Reader::decode(const BinaryBitmap& image) const
 {
+	QRDetector qrDetector;
 #if 1
 	if (!_hints.isPure())
 		return FirstOrDefault(decode(image, 1));
@@ -34,9 +35,9 @@ Result Reader::decode(const BinaryBitmap& image) const
 
 	DetectorResult detectorResult;
 	if (_hints.hasFormat(BarcodeFormat::QRCode))
-		detectorResult = DetectPureQR(*binImg);
+		detectorResult = qrDetector.DetectPureQR(*binImg);
 	if (_hints.hasFormat(BarcodeFormat::MicroQRCode) && !detectorResult.isValid())
-		detectorResult = DetectPureMQR(*binImg);
+		detectorResult =  qrDetector.DetectPureMQR(*binImg);
 
 	if (!detectorResult.isValid())
 		return {};
@@ -48,7 +49,7 @@ Result Reader::decode(const BinaryBitmap& image) const
 				  detectorResult.bits().width() < 21 ? BarcodeFormat::MicroQRCode : BarcodeFormat::QRCode);
 }
 
-void logFPSet(const FinderPatternSet& fps [[maybe_unused]])
+void logFPSet(const QRDetector::FinderPatternSet& fps [[maybe_unused]])
 {
 #ifdef PRINT_DEBUG
 	auto drawLine = [](PointF a, PointF b) {
@@ -66,6 +67,7 @@ void logFPSet(const FinderPatternSet& fps [[maybe_unused]])
 
 Results Reader::decode(const BinaryBitmap& image, int maxSymbols) const
 {
+	QRDetector qrDetector;
 	auto binImg = image.getBitMatrix();
 	if (binImg == nullptr)
 		return {};
@@ -74,7 +76,7 @@ Results Reader::decode(const BinaryBitmap& image, int maxSymbols) const
 	LogMatrixWriter lmw(log, *binImg, 5, "qr-log.pnm");
 #endif
 
-	auto allFPs = FindFinderPatterns(*binImg, _hints.tryHarder());
+	auto allFPs = qrDetector.FindFinderPatterns(*binImg, _hints.tryHarder());
 
 #ifdef PRINT_DEBUG
 	printf("allFPs: %d\n", Size(allFPs));
@@ -84,14 +86,14 @@ Results Reader::decode(const BinaryBitmap& image, int maxSymbols) const
 	Results results;
 
 	if (_hints.hasFormat(BarcodeFormat::QRCode)) {
-		auto allFPSets = GenerateFinderPatternSets(allFPs);
+		auto allFPSets =  qrDetector.GenerateFinderPatternSets(allFPs);
 		for (const auto& fpSet : allFPSets) {
 			if (Contains(usedFPs, fpSet.bl) || Contains(usedFPs, fpSet.tl) || Contains(usedFPs, fpSet.tr))
 				continue;
 
 			logFPSet(fpSet);
 
-			auto detectorResult = SampleQR(*binImg, fpSet);
+			auto detectorResult =  qrDetector.SampleQR(*binImg, fpSet);
 			if (detectorResult.isValid()) {
 				auto decoderResult = Decode(detectorResult.bits());
 				auto position = detectorResult.position();
@@ -114,7 +116,7 @@ Results Reader::decode(const BinaryBitmap& image, int maxSymbols) const
 			if (Contains(usedFPs, fp))
 				continue;
 
-			auto detectorResult = SampleMQR(*binImg, fp);
+			auto detectorResult =  qrDetector.SampleMQR(*binImg, fp);
 			if (detectorResult.isValid()) {
 				auto decoderResult = Decode(detectorResult.bits());
 				auto position = detectorResult.position();

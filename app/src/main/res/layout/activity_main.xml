@@ -14,8 +14,9 @@
 
     <TextView
         android:elevation="10dp"
+        android:layout_margin="20dp"
         android:id="@+id/hint"
-        android:textSize="32sp"
+        android:textSize="24sp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -25,6 +26,7 @@
 
 <!--    create a progressbar-->
     <ProgressBar
+        android:visibility="invisible"
         android:elevation="10dp"
         android:id="@+id/pro"
         style="@android:style/Widget.ProgressBar.Horizontal"
@@ -35,6 +37,16 @@
         android:progress="0"
         android:progressDrawable="@drawable/layer_list_progress_drawable"
         app:layout_constraintTop_toBottomOf="@+id/hint"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/btn"
+        android:layout_marginTop="30dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="开始传输"
+        app:layout_constraintTop_toBottomOf="@+id/pro"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

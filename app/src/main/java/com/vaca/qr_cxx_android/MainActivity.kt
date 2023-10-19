@@ -20,21 +20,35 @@ import android.util.Size
 import android.view.Surface
 import android.view.SurfaceView
 import android.view.TextureView
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import com.google.android.material.color.utilities.MaterialDynamicColors.surface
+import com.vaca.qr_cxx_android.ConvertUtils.convertNV21toJPEG
+import com.vaca.qr_cxx_android.ConvertUtils.convertYUV_420_888toNV21
 import com.vaca.qr_cxx_android.databinding.ActivityMainBinding
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.text.DecimalFormat
 import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
+    external fun inputImage(b:ByteArray)
+    external fun initWorker()
+    external fun getProgress():Int
+
+    companion object {
+        init {
+            System.loadLibrary("qr_cxx_android")
+        }
+    }
+
 
     private val mCameraId = "0"
     lateinit var mPreviewSize: Size
@@ -79,13 +93,11 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun openCamera() {
+        startBackgroundThread()
         try {
             val cameraManager =
                 getSystemService(Context.CAMERA_SERVICE) as CameraManager
             mPreviewSize = Size(PREVIEW_WIDTH, PREVIEW_HEIGHT)
-
-
-           // configureTransform( PREVIEW_HEIGHT,PREVIEW_WIDTH)
             cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
@@ -98,29 +110,10 @@ class MainActivity : AppCompatActivity() {
             override fun onConfigured(session: CameraCaptureSession) {
                 mCaptureSession = session
                 updatePreview()
-
             }
-
             override fun onConfigureFailed(session: CameraCaptureSession) {}
         }
-    private fun convertYUV_420_888toNV21(image: Image): ByteArray {
-        val nv21: ByteArray
-        val yBuffer = image.planes[0].buffer
-        val vuBuffer = image.planes[2].buffer
-        val ySize = yBuffer.remaining()
-        val vuSize = vuBuffer.remaining()
-        nv21 = ByteArray(ySize + vuSize)
-        yBuffer[nv21, 0, ySize]
-        vuBuffer[nv21, ySize, vuSize]
-        return nv21
-    }
 
-    private fun convertNV21toJPEG(nv21: ByteArray, width: Int, height: Int): ByteArray {
-        val out = ByteArrayOutputStream()
-        val yuv = YuvImage(nv21, ImageFormat.NV21, width, height, null)
-        yuv.compressToJpeg(Rect(0, 0, width, height), 60, out)
-        return out.toByteArray()
-    }
     private inner class ImageSaver(var reader: ImageReader) : Runnable {
         override fun run() {
             val image = reader.acquireLatestImage() ?: return
@@ -183,6 +176,7 @@ class MainActivity : AppCompatActivity() {
 
 
 
+    var time=0L
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -194,11 +188,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         initWorker()
-
-
-
-
-        startBackgroundThread()
 
         val requestLocationPermission = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
@@ -218,25 +207,35 @@ class MainActivity : AppCompatActivity() {
                 openCamera()
             }
         }
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestLocationPermission.launch(
-                arrayOf(
+        binding.btn.setOnClickListener{
+            time=System.nanoTime()
+            binding.btn.isClickable=false
+            binding.btn.isFocusable=false
+            binding.btn.text="传输中"
+            binding.pro.visibility= View.VISIBLE
+
+            if (ContextCompat.checkSelfPermission(
+                    this,
                     Manifest.permission.CAMERA
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestLocationPermission.launch(
+                    arrayOf(
+                        Manifest.permission.CAMERA
+                    )
                 )
-            )
-        }else{
-            binding.texture.post {
-                openCamera()
+            }else{
+                binding.texture.post {
+                    openCamera()
+                }
             }
         }
 
 
 
-        //update progress every 1 s
+
+
+
         Thread{
             while(true){
                 Thread.sleep(200)
@@ -247,22 +246,25 @@ class MainActivity : AppCompatActivity() {
 
 
 
-    external fun inputImage(b:ByteArray)
-    external fun initWorker()
-    external fun getProgress():Int
-
-    companion object {
-        init {
-            System.loadLibrary("qr_cxx_android")
-        }
-    }
 
 
     fun decodeSuccess(b: ByteArray){
         val file= File(PathUtil.getPathX("file2.pdf"))
         file.writeBytes(b)
         runOnUiThread {
-            binding.hint.text="md5 check success"
+            var text="md5 check ok"
+            val currentNano=System.nanoTime()
+            val time=(currentNano-time)/1000000000.0
+            //reserve 2 decimal
+            val df = DecimalFormat("#.00")
+            var str=df.format(time)
+
+            text+="\n耗时：$str s"
+
+            binding.hint.text=text
+            binding.btn.isClickable=true
+            binding.btn.isFocusable=true
+            binding.btn.text="开始传输"
         }
     }
 
@@ -272,7 +274,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun configureTransform(viewWidth: Int, viewHeight: Int) {
-
         val rotation =windowManager.defaultDisplay.rotation
         val matrix = Matrix()
         val viewRect = RectF(0F, 0F, viewWidth.toFloat(), viewHeight.toFloat())
@@ -300,6 +301,29 @@ class MainActivity : AppCompatActivity() {
         }
         binding.texture.setTransform(matrix)
     }
+    override fun onPause() {
+        closeCamera()
+        super.onPause()
+    }
+    private fun closeCamera() {
+        mCaptureSession.stopRepeating()
+        mCaptureSession.close()
+        mCameraDevice!!.close()
+        mImageReader.close()
+        stopBackgroundThread()
+    }
 
+    private fun stopBackgroundThread() {
+        try {
+            if (mHandlerThread != null) {
+                mHandlerThread!!.quitSafely()
+                mHandlerThread!!.join()
+                mHandlerThread = null
+            }
+            mHandler.removeCallbacksAndMessages(null)
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
+        }
+    }
 
 }

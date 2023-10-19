@@ -1,42 +1,53 @@
 package com.vaca.qr_cxx_android
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.ImageFormat
-import android.graphics.Rect
-import android.graphics.YuvImage
+import android.content.res.Configuration
+import android.graphics.*
 import android.hardware.camera2.*
 import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
-import android.os.Build.VERSION_CODES.P
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.provider.Settings
+import android.util.Log
 import android.util.Size
+import android.view.Surface
+import android.view.SurfaceView
+import android.view.TextureView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import com.google.android.material.color.utilities.MaterialDynamicColors.surface
 import com.vaca.qr_cxx_android.databinding.ActivityMainBinding
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.*
+
 
 class MainActivity : AppCompatActivity() {
 
     private val mCameraId = "0"
     lateinit var mPreviewSize: Size
-    private val PREVIEW_WIDTH = 1080
-    private val PREVIEW_HEIGHT = 1920
+    private val PREVIEW_WIDTH = 2048
+    private val PREVIEW_HEIGHT = 2048
     private var mCameraDevice: CameraDevice? = null
     lateinit var mHandler: Handler
     lateinit var mCaptureSession: CameraCaptureSession
     lateinit var mPreviewBuilder: CaptureRequest.Builder
     private var mHandlerThread: HandlerThread? = null
     lateinit var mImageReader: ImageReader
+
+    var haveConfig=false
 
 
 
@@ -72,6 +83,9 @@ class MainActivity : AppCompatActivity() {
             val cameraManager =
                 getSystemService(Context.CAMERA_SERVICE) as CameraManager
             mPreviewSize = Size(PREVIEW_WIDTH, PREVIEW_HEIGHT)
+
+
+           // configureTransform( PREVIEW_HEIGHT,PREVIEW_WIDTH)
             cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
@@ -114,6 +128,11 @@ class MainActivity : AppCompatActivity() {
                 convertYUV_420_888toNV21(image),
                 image.width, image.height
             )
+            if(!haveConfig){
+                haveConfig=true
+                mPreviewSize=Size(image.width,image.height)
+                configureTransform(binding.texture.width,binding.texture.height)
+            }
             inputImage(data)
             image.close()
         }
@@ -146,15 +165,19 @@ class MainActivity : AppCompatActivity() {
             }, mHandler
         )
 
+        val texture = binding.texture.surfaceTexture
+        val surface = Surface(texture)
+
+        mPreviewBuilder.addTarget(surface)
+
+
 
         camera.createCaptureSession(
-            listOf(mImageReader.surface),
+            listOf(mImageReader.surface,surface),
             mSessionStateCallback,
             mHandler
         )
     }
-
-
 
 
 
@@ -191,8 +214,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            openCamera()
-
+            binding.texture.post {
+                openCamera()
+            }
         }
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -205,7 +229,9 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         }else{
-            openCamera()
+            binding.texture.post {
+                openCamera()
+            }
         }
 
 
@@ -245,4 +271,35 @@ class MainActivity : AppCompatActivity() {
             binding.pro.progress=progress
         }
     }
+    private fun configureTransform(viewWidth: Int, viewHeight: Int) {
+
+        val rotation =windowManager.defaultDisplay.rotation
+        val matrix = Matrix()
+        val viewRect = RectF(0F, 0F, viewWidth.toFloat(), viewHeight.toFloat())
+        //RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+        val widthHeight = mPreviewSize.width.toFloat() / mPreviewSize.height
+            .toFloat()
+        val bottom = (viewWidth * widthHeight).toInt()
+        val bufferRect = RectF(0F, 0F, viewWidth.toFloat(), bottom.toFloat())
+        val centerX = viewRect.centerX()
+        val centerY = viewRect.centerY()
+        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL)
+            val scale = Math.max(
+                viewHeight.toFloat() / mPreviewSize.height,
+                viewWidth.toFloat() / mPreviewSize.width
+            )
+            matrix.postScale(scale, scale, centerX, centerY)
+            matrix.postRotate((90 * (rotation - 2)).toFloat(), centerX, centerY)
+        } else if (Surface.ROTATION_180 == rotation) {
+            matrix.postRotate(180f, centerX, centerY)
+        } else {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL)
+        }
+        binding.texture.setTransform(matrix)
+    }
+
+
 }

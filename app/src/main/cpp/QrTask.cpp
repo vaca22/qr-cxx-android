@@ -190,7 +190,7 @@ void QrTask::operator()() {
         for (auto &&result: results) {
             parseJson(const_cast<char *>(result.text().c_str()));
         }
-        LOGE("size:%d\n", results.size());
+        LOGE("qr number:%d\n", results.size());
     }
 
 

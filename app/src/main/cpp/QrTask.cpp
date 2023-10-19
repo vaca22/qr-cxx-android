@@ -92,7 +92,7 @@ void QrTask::parseJson(char *json) {
     //check if index_int in index_vector
     for(int i=0;i<index_list_len;i++){
         if(index_list[i]==index_int){
-            LOGE("index %d is in index_vector\n",index_int);
+      //     LOGE("index %d is in index_vector\n",index_int);
             return;
         }
     }

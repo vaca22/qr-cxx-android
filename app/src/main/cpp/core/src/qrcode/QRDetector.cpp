@@ -443,20 +443,20 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 		// go over the whole set of alignment patters again and try to fill any remaining gap by using available neighbors as guides
 		for (int y = 0; y <= N; ++y)
 			for (int x = 0; x <= N; ++x) {
-				if (apP(x, y))
+				if (apP(x, y).has_value())
 					continue;
 
 				// find the two closest valid alignment pattern pixel positions both horizontally and vertically
 				std::vector<PointF> hori, verti;
 				for (int i = 2; i < 2 * N + 2 && Size(hori) < 2; ++i) {
 					int xi = x + i / 2 * (i%2 ? 1 : -1);
-					if (0 <= xi && xi <= N && apP(xi, y))
-						hori.push_back(*apP(xi, y));
+					if (0 <= xi && xi <= N && apP(xi, y).has_value())
+						hori.push_back(apP(xi, y).value());
 				}
 				for (int i = 2; i < 2 * N + 2 && Size(verti) < 2; ++i) {
 					int yi = y + i / 2 * (i%2 ? 1 : -1);
-					if (0 <= yi && yi <= N && apP(x, yi))
-						verti.push_back(*apP(x, yi));
+					if (0 <= yi && yi <= N && apP(x, yi).has_value())
+						verti.push_back(apP(x, yi).value());
 				}
 
 				// if we found 2 each, intersect the two lines that are formed by connecting the point pairs

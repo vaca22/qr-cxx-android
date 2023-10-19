@@ -58,12 +58,12 @@ JNIEXPORT void JNICALL
 Java_com_vaca_qr_1cxx_1android_MainActivity_inputImage(JNIEnv *env, jobject thiz, jbyteArray b) {
     jsize len = env->GetArrayLength(b);
     jbyte *buffer_img = env->GetByteArrayElements(b, 0);
-    auto *buffer_img2 = new unsigned char[len];
-    memcpy(buffer_img2, buffer_img, len);
-    imgQueue.push(buffer_img2);
+    auto *buffer_img_cpy = new unsigned char[len];
+    memcpy(buffer_img_cpy, buffer_img, len);
+    imgQueue.push(buffer_img_cpy);
 
     //create a QrTask object and push it to the queue
-    QrTask task = QrTask(buffer_img2, len);
+    QrTask task = QrTask(buffer_img_cpy, len);
 
     tasks.push(task);
     cv.notify_one();
@@ -103,4 +103,25 @@ extern "C"
 JNIEXPORT jint JNICALL
 Java_com_vaca_qr_1cxx_1android_MainActivity_getProgress(JNIEnv *env, jobject thiz) {
     return QrTask::getProgress();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_vaca_qr_1cxx_1android_MainActivity_resetWorker(JNIEnv *env, jobject thiz) {
+    if(QrTask::index_list!= nullptr){
+        delete [] QrTask::index_list;
+        QrTask::index_list= nullptr;
+    }
+    QrTask::isInit= false;
+    QrTask::isEnd= false;
+    QrTask::progress_num = 0;
+    QrTask::last_progress = -1;
+    QrTask::progress = 0;
+}
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_vaca_qr_1cxx_1android_MainActivity_stopWorker(JNIEnv *env, jobject thiz) {
+
 }

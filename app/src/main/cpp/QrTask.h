@@ -39,12 +39,11 @@ public:
     static ProgressCallback progressCallback;
 
 
-
+    static int *index_list;
 private:
     int len;
     unsigned char *buffer_data;
 
-    static int *index_list;
     static int index_list_len;
 
     void charsMd5(char * decoded_data,int len);

@@ -40,6 +40,8 @@ import java.util.*
 
 class MainActivity : AppCompatActivity() {
     external fun inputImage(b:ByteArray)
+    external fun resetWorker()
+    external fun stopWorker()
     external fun initWorker()
     external fun getProgress():Int
 
@@ -208,11 +210,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.btn.setOnClickListener{
+            resetWorker()
             time=System.nanoTime()
             binding.btn.isClickable=false
             binding.btn.isFocusable=false
             binding.btn.text="传输中"
             binding.pro.visibility= View.VISIBLE
+            binding.hint.text=""
 
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -255,16 +259,14 @@ class MainActivity : AppCompatActivity() {
             var text="md5 check ok"
             val currentNano=System.nanoTime()
             val time=(currentNano-time)/1000000000.0
-            //reserve 2 decimal
             val df = DecimalFormat("#.00")
             var str=df.format(time)
-
             text+="\n耗时：$str s"
-
             binding.hint.text=text
             binding.btn.isClickable=true
             binding.btn.isFocusable=true
             binding.btn.text="开始传输"
+            closeCamera()
         }
     }
 

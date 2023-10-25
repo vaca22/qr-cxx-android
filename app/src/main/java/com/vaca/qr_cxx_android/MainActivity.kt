@@ -195,6 +195,7 @@ class MainActivity : AppCompatActivity() {
             binding.texture.post {
                 openCamera()
                 resetWorker()
+                time = 0L
                 binding.btn.isClickable = false
                 binding.btn.isFocusable = false
                 binding.btn.text = "传输中"
@@ -219,6 +220,7 @@ class MainActivity : AppCompatActivity() {
                 binding.texture.post {
                     openCamera()
                     resetWorker()
+                    time = 0L
                     binding.btn.isClickable = false
                     binding.btn.isFocusable = false
                     binding.btn.text = "传输中"

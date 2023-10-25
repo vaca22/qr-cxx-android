@@ -1,49 +1,39 @@
 package com.vaca.qr_cxx_android
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
-import android.graphics.*
+import android.graphics.ImageFormat
+import android.graphics.Matrix
+import android.graphics.RectF
 import android.hardware.camera2.*
-import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.provider.Settings
-import android.util.Log
 import android.util.Size
 import android.view.Surface
-import android.view.SurfaceView
-import android.view.TextureView
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import com.google.android.material.color.utilities.MaterialDynamicColors.surface
 import com.vaca.qr_cxx_android.ConvertUtils.convertNV21toJPEG
 import com.vaca.qr_cxx_android.ConvertUtils.convertYUV_420_888toNV21
 import com.vaca.qr_cxx_android.databinding.ActivityMainBinding
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.DecimalFormat
-import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
-    external fun inputImage(b:ByteArray)
+    external fun inputImage(b: ByteArray)
     external fun resetWorker()
     external fun stopWorker()
     external fun initWorker()
-    external fun getProgress():Int
+    external fun getProgress(): Int
 
     companion object {
         init {
@@ -63,8 +53,7 @@ class MainActivity : AppCompatActivity() {
     private var mHandlerThread: HandlerThread? = null
     lateinit var mImageReader: ImageReader
 
-    var haveConfig=false
-
+    var haveConfig = false
 
 
     private fun startBackgroundThread() {
@@ -113,6 +102,7 @@ class MainActivity : AppCompatActivity() {
                 mCaptureSession = session
                 updatePreview()
             }
+
             override fun onConfigureFailed(session: CameraCaptureSession) {}
         }
 
@@ -123,10 +113,10 @@ class MainActivity : AppCompatActivity() {
                 convertYUV_420_888toNV21(image),
                 image.width, image.height
             )
-            if(!haveConfig){
-                haveConfig=true
-                mPreviewSize=Size(image.width,image.height)
-                configureTransform(binding.texture.width,binding.texture.height)
+            if (!haveConfig) {
+                haveConfig = true
+                mPreviewSize = Size(image.width, image.height)
+                configureTransform(binding.texture.width, binding.texture.height)
             }
             inputImage(data)
             image.close()
@@ -168,17 +158,14 @@ class MainActivity : AppCompatActivity() {
 
 
         camera.createCaptureSession(
-            listOf(mImageReader.surface,surface),
+            listOf(mImageReader.surface, surface),
             mSessionStateCallback,
             mHandler
         )
     }
 
 
-
-
-
-    var time=0L
+    var time = 0L
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -194,9 +181,9 @@ class MainActivity : AppCompatActivity() {
         val requestLocationPermission = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) {
-            for(k in it){
-                if(!k.value){
-                    Toast.makeText(this,"需要相机权限", Toast.LENGTH_LONG).show()
+            for (k in it) {
+                if (!k.value) {
+                    Toast.makeText(this, "需要相机权限", Toast.LENGTH_LONG).show()
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                     val uri = Uri.fromParts("package", packageName, null)
                     intent.data = uri
@@ -207,16 +194,16 @@ class MainActivity : AppCompatActivity() {
 
             binding.texture.post {
                 openCamera()
+                resetWorker()
+                binding.btn.isClickable = false
+                binding.btn.isFocusable = false
+                binding.btn.text = "传输中"
+                binding.pro.visibility = View.VISIBLE
+                binding.hint.text = ""
             }
         }
-        binding.btn.setOnClickListener{
-            resetWorker()
-            time=System.nanoTime()
-            binding.btn.isClickable=false
-            binding.btn.isFocusable=false
-            binding.btn.text="传输中"
-            binding.pro.visibility= View.VISIBLE
-            binding.hint.text=""
+        binding.btn.setOnClickListener {
+
 
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -228,9 +215,15 @@ class MainActivity : AppCompatActivity() {
                         Manifest.permission.CAMERA
                     )
                 )
-            }else{
+            } else {
                 binding.texture.post {
                     openCamera()
+                    resetWorker()
+                    binding.btn.isClickable = false
+                    binding.btn.isFocusable = false
+                    binding.btn.text = "传输中"
+                    binding.pro.visibility = View.VISIBLE
+                    binding.hint.text = ""
                 }
             }
         }
@@ -240,43 +233,46 @@ class MainActivity : AppCompatActivity() {
 
 
 
-        Thread{
-            while(true){
-                Thread.sleep(200)
+        Thread {
+            while (true) {
+                Thread.sleep(100)
+                if (time == 0L) {
+                    if (getProgress() != 0) {
+                        time = System.nanoTime()
+                    }
+                }
                 updateProgress(getProgress())
             }
         }.start()
     }
 
 
-
-
-
-    fun decodeSuccess(b: ByteArray){
-        val file= File(PathUtil.getPathX("file2.pdf"))
+    fun decodeSuccess(b: ByteArray) {
+        val file = File(PathUtil.getPathX("file2.pdf"))
         file.writeBytes(b)
         runOnUiThread {
-            var text="md5 check ok"
-            val currentNano=System.nanoTime()
-            val time=(currentNano-time)/1000000000.0
+            var text = "md5 check ok"
+            val currentNano = System.nanoTime()
+            val time = (currentNano - time) / 1000000000.0
             val df = DecimalFormat("#.00")
-            var str=df.format(time)
-            text+="\n耗时：$str s"
-            binding.hint.text=text
-            binding.btn.isClickable=true
-            binding.btn.isFocusable=true
-            binding.btn.text="开始传输"
+            var str = df.format(time)
+            text += "\n耗时：$str s"
+            binding.hint.text = text
+            binding.btn.isClickable = true
+            binding.btn.isFocusable = true
+            binding.btn.text = "开始传输"
             closeCamera()
         }
     }
 
-    fun updateProgress(progress:Int){
+    fun updateProgress(progress: Int) {
         runOnUiThread {
-            binding.pro.progress=progress
+            binding.pro.progress = progress
         }
     }
+
     private fun configureTransform(viewWidth: Int, viewHeight: Int) {
-        val rotation =windowManager.defaultDisplay.rotation
+        val rotation = windowManager.defaultDisplay.rotation
         val matrix = Matrix()
         val viewRect = RectF(0F, 0F, viewWidth.toFloat(), viewHeight.toFloat())
         //RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
@@ -303,10 +299,11 @@ class MainActivity : AppCompatActivity() {
         }
         binding.texture.setTransform(matrix)
     }
+
     override fun onPause() {
-        closeCamera()
         super.onPause()
     }
+
     private fun closeCamera() {
         mCaptureSession.stopRepeating()
         mCaptureSession.close()

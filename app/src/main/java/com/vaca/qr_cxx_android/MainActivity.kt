@@ -118,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             if (!haveConfig) {
                 haveConfig = true
                 mPreviewSize = Size(image.width, image.height)
-                configureTransform( image.height,image.width)
+                configureTransform( binding.texture.width, binding.texture.height)
             }
             inputImage(data)
             image.close()

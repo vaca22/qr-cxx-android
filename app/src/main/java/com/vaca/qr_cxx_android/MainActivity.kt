@@ -14,6 +14,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.provider.Settings
+import android.util.Log
 import android.util.Size
 import android.view.Surface
 import android.view.View
@@ -109,6 +110,7 @@ class MainActivity : AppCompatActivity() {
     private inner class ImageSaver(var reader: ImageReader) : Runnable {
         override fun run() {
             val image = reader.acquireLatestImage() ?: return
+          //  Log.e("vaca","width:${image.width} height:${image.height}")
             val data = convertNV21toJPEG(
                 convertYUV_420_888toNV21(image),
                 image.width, image.height
@@ -116,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             if (!haveConfig) {
                 haveConfig = true
                 mPreviewSize = Size(image.width, image.height)
-                configureTransform(binding.texture.width, binding.texture.height)
+                configureTransform( image.height,image.width)
             }
             inputImage(data)
             image.close()
